@@ -1,5 +1,4 @@
-ARG BUILD_FROM=python:3.12-slim
-FROM ${BUILD_FROM}
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -15,4 +14,3 @@ RUN chmod a+x /run.sh
 
 EXPOSE 8000
 CMD ["/run.sh"]
-
