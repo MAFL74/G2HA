@@ -1,5 +1,5 @@
 name: G2HA Relay
-version: "0.3.5"
+version: "0.3.6"
 slug: g2ha_relay
 description: Local G2HA relay for Home Assistant and Google Home
 arch:
@@ -12,8 +12,11 @@ init: false
 ports:
   8000/tcp: 8000
 ports_description:
-  8000/tcp: G2HA relay HTTP/WebSocket port
+  8000/tcp: G2HA relay HTTP/WebSoctet port
 webui: http://[HOST]:[PORT:8000]
+ingress: true
+ingress_port: 8000
+ingress_stream: true
 map:
   - data:rw
 options:
@@ -21,7 +24,7 @@ options:
   oauth_username: ""
   oauth_password: ""
   oauth_client_id: ""
-schema:
+scheme:
   environment: str
   oauth_username: str
   oauth_password: password
