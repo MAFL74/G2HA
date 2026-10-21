@@ -27,6 +27,19 @@ app = FastAPI(title="G2HA", version="0.1.0", lifespan=lifespan)
 oauth = OAuthStore(os.getenv("G2HA_OAUTH_DB", "/var/lib/g2ha/oauth.sqlite3"))
 
 
+@app.get("/", response_class=HTMLResponse)
+async def home() -> str:
+    """Small ingress landing page; the full UI remains the HA G2HA dashboard."""
+    return HTMLResponse(
+        """<!doctype html><html lang='en'><head><meta charset='utf-8'>
+        <meta name='viewport' content='width=device-width,initial-scale=1'>
+        <title>G2HA Relay</title></head><body>
+        <h1>G2HA Relay</h1><p>Relay is running.</p>
+        <p><a href='/g2ha-dashboard'>Open G2HA dashboard</a></p>
+        </body></html>"""
+    )
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "environment": os.getenv("G2HA_ENV", "development"), "instances": str(len(relay_state.instances)), "devices": str(sum(len(item.devices) for item in relay_state.instances.values()))}
@@ -146,4 +159,3 @@ async def ha_ws(websocket: WebSocket, instance_id: str):
     except Exception:
         _LOGGER.exception("G2HA HA WebSocket failed for instance %s", instance_id)
         relay_state.disconnect(instance_id, websocket)
-
