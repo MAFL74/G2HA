@@ -1,0 +1,12 @@
+{
+  "domain": "g2ha",
+  "name": "G2HA",
+  "version": "0.2.0",
+  "documentation": "https://g2ha.falchlarsen.com",
+  "codeowners": [],
+  "config_flow": true,
+  "diagnostics": true,
+  "iot_class": "cloud_push",
+  "requirements": []
+}
+
