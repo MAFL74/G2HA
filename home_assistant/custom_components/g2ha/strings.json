@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Koble til G2HA",
+        "description": "Koble Home Assistant til G2HA-reléet.",
+        "data": {
+          "relay_url": "G2HA relay URL",
+          "instance_id": "Instans-ID"
+        }
+      }
+    },
+    "error": {},
+    "abort": {}
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "G2HA-innstillinger",
+        "description": "Velg om alle støttede entities skal synkroniseres, og om utilgjengelige entities skal beholdes i Google Home.",
+        "data": {
+          "expose_all": "Synkroniser alle støttede entities",
+          "expose_all_areas": "Synkroniser alle rom/områder",
+          "include_unavailable": "Ta med utilgjengelige entities",
+          "exposed_areas": "Rom/områder som skal eksponeres",
+          "room_naming_mode": "Romnavn i Google Home",
+          "room_name_map": "Egendefinert rommapping",
+          "home_name": "Google Home-navn"
+        }
+      },
+      "entities": {
+        "title": "Velg entities",
+        "description": "Søk etter navn eller entity_id og velg det som skal eksponeres til Google Home.",
+        "data": {
+          "exposed_entities": "Entities som skal eksponeres"
+        }
+      }
+    }
+  }
+}
+
