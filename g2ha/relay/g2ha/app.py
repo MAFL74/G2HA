@@ -27,10 +27,16 @@ app = FastAPI(title="G2HA", version="0.1.0", lifespan=lifespan)
 oauth = OAuthStore(os.getenv("G2HA_OAUTH_DB", "/var/lib/g2ha/oauth.sqlite3"))
 
 
-@app.get("/", response_class=RedirectResponse)
-async def home() -> RedirectResponse:
-    """Open the existing Home Assistant G2HA dashboard from the sidebar panel."""
-    return RedirectResponse("/g2ha-dashboard", status_code=307)
+@app.get("/", response_class=HTMLResponse)
+async def home() -> HTMLResponse:
+    """Show a small direct-service status page for the optional Web UI port."""
+    return HTMLResponse(
+        "<!doctype html><html><head><meta charset='utf-8'><title>G2HA Relay</title>"
+        "<style>body{font-family:system-ui,sans-serif;margin:3rem;background:#111;color:#eee}"
+        "a{color:#4fc3f7}</style></head><body><h1>G2HA Relay</h1>"
+        "<p>Relay is running.</p><p>The Home Assistant dashboard is available from the "
+        "G2HA entry in the Home Assistant sidebar.</p></body></html>"
+    )
 
 
 @app.get("/health")
