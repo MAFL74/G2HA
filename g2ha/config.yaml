@@ -12,7 +12,7 @@ init: false
 ports:
   8000/tcp: 8000
 ports_description:
-  8000/tcp: G2HA relay HTTP/WebSoctet port
+  8000/tcp: G2HA relay HTTP/WebSocket port
 webui: http://[HOST]:[PORT:8000]
 ingress: true
 ingress_port: 8000
@@ -24,7 +24,7 @@ options:
   oauth_username: ""
   oauth_password: ""
   oauth_client_id: ""
-scheme:
+schema:
   environment: str
   oauth_username: str
   oauth_password: password
