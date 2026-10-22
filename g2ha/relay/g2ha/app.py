@@ -41,7 +41,7 @@ async def home() -> HTMLResponse:
         "?location.protocol+'//'+location.hostname+':8123/g2ha-dashboard/g2ha'"
         ":location.origin+'/g2ha-dashboard/g2ha';"
         "document.getElementById('dashboard').href=dashboard;"
-        "location.replace(dashboard);"
+        "window.top.location.replace(dashboard);"
         "</script></body></html>"
     )
 
