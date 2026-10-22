@@ -4,7 +4,7 @@ import os
 import uuid
 import logging
 from html import escape
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -144,6 +144,7 @@ async def authorize_submit(client_id: str = Form(...), redirect_uri: str = Form(
     instance_id = _active_instance_id()
     if not instance_id:
         raise HTTPException(503, "Home Assistant instance is not connected")
+    _LOGGER.info("OAuth authorization approved instance=%s redirect_host=%s", instance_id, urlparse(redirect_uri).netloc or "unknown")
     params = {"code": oauth.create_code(instance_id, client_id, redirect_uri)}
     if state:
         params["state"] = state
@@ -177,11 +178,13 @@ async def token(request: Request):
         if not result:
             raise HTTPException(400, "Invalid or expired authorization code")
         access, refresh = result
+        _LOGGER.info("OAuth token exchange grant=authorization_code result=success")
         return {"token_type": "Bearer", "access_token": access, "refresh_token": refresh, "expires_in": 3600}
     if form.get("grant_type") == "refresh_token":
         access = oauth.refresh_access(str(form.get("refresh_token", "")), client_id)
         if not access:
             raise HTTPException(400, "Invalid refresh token")
+        _LOGGER.info("OAuth token exchange grant=refresh_token result=success")
         return {"token_type": "Bearer", "access_token": access, "expires_in": 3600}
     raise HTTPException(400, "Unsupported grant_type")
 
@@ -201,11 +204,15 @@ async def google_assistant(request: Request) -> dict[str, Any]:
 
     intents = body.get("inputs", [])
     intent = intents[0].get("intent") if intents else None
+    _LOGGER.info("Google Home intent=%s instance=%s", intent or "unknown", instance_id)
     if intent == "action.devices.SYNC":
-        return sync_response(request_id, instance_id, list(instance.devices.values()))
+        response = sync_response(request_id, instance_id, list(instance.devices.values()))
+        _LOGGER.info("Google Home SYNC completed instance=%s devices=%d", instance_id, len(response["payload"]["devices"]))
+        return response
     if intent == "action.devices.QUERY":
         ids = body["inputs"][0]["payload"].get("devices", [])
         states = {item["id"]: instance.devices[item["id"]].state for item in ids if item["id"] in instance.devices}
+        _LOGGER.info("Google Home QUERY completed instance=%s requested=%d returned=%d", instance_id, len(ids), len(states))
         return query_response(request_id, states)
     if intent == "action.devices.EXECUTE":
         return await execute(request_id, instance_id, body["inputs"][0]["payload"])
@@ -249,6 +256,7 @@ async def ha_ws(websocket: WebSocket, instance_id: str):
                 await websocket.send_json({"type": "hello_ack"})
             elif envelope.type == "devices" and envelope.devices is not None:
                 relay_state.set_devices(instance_id, envelope.devices)
+                _LOGGER.info("HA device snapshot instance=%s devices=%d", instance_id, len(envelope.devices))
             elif envelope.type == "state" and envelope.device_id in instance.devices:
                 instance.devices[envelope.device_id].state = envelope.payload
             elif envelope.type == "result" and envelope.request_id in instance.pending:
