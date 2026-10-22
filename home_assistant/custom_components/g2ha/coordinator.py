@@ -52,6 +52,7 @@ _GOOGLE_HVAC_MODE_MAP = {
     "heat_cool": "heatcool",
     "fan_only": "fan-only",
 }
+_HA_HVAC_MODE_MAP = {google: ha for ha, google in _GOOGLE_HVAC_MODE_MAP.items()}
 
 
 class G2HACoordinator:
@@ -380,7 +381,7 @@ class G2HACoordinator:
         value = state.state
         if state.domain in ("light", "switch", "fan"):
             return {"on": value == "on"}
-        if state.domain in ("input_boolean", "humidifier", "dehumidifier", "air_purifier", "media_player"):
+        if state.domain in ("input_boolean", "humidifier", "dehumidifier", "air_purifier"):
             return {"on": value not in ("off", "idle", "standby")}
         if state.domain == "cover":
             position = state.attributes.get("current_position")
@@ -464,7 +465,8 @@ class G2HACoordinator:
         elif command == "action.devices.commands.ThermostatTemperatureSetpoint":
             service, data["temperature"] = "set_temperature", params.get("thermostatTemperatureSetpoint")
         elif command == "action.devices.commands.ThermostatSetMode":
-            service, data["hvac_mode"] = "set_hvac_mode", str(params.get("thermostatMode", "off")).lower()
+            google_mode = str(params.get("thermostatMode", "off")).lower()
+            service, data["hvac_mode"] = "set_hvac_mode", _HA_HVAC_MODE_MAP.get(google_mode, google_mode)
         elif command == "action.devices.commands.StartStop":
             service = "start" if params.get("start") else "stop"
         elif command == "action.devices.commands.MediaPause":
