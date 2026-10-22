@@ -28,6 +28,31 @@ app = FastAPI(title="G2HA", version="0.1.0", lifespan=lifespan)
 oauth = OAuthStore(os.getenv("G2HA_OAUTH_DB", "/var/lib/g2ha/oauth.sqlite3"))
 
 
+def _connected_instance_ids() -> list[str]:
+    return [instance_id for instance_id, instance in relay_state.instances.items() if instance.websocket is not None]
+
+
+def _active_instance_id() -> str | None:
+    connected = _connected_instance_ids()
+    if len(connected) == 1:
+        return connected[0]
+    if not connected and len(relay_state.instances) == 1:
+        return next(iter(relay_state.instances))
+    return None
+
+
+def _resolve_instance_id(instance_id: str | None) -> str | None:
+    if not instance_id:
+        return None
+    instance = relay_state.instances.get(instance_id)
+    if instance is not None and instance.websocket is not None:
+        return instance_id
+    connected = _connected_instance_ids()
+    if len(connected) == 1:
+        return connected[0]
+    return instance_id if instance is not None else None
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home() -> HTMLResponse:
     """Open the useful G2HA dashboard from the add-on sidebar/Web UI."""
@@ -116,10 +141,10 @@ async def authorize(request: Request, response_type: str, client_id: str, redire
 async def authorize_submit(client_id: str = Form(...), redirect_uri: str = Form(...), state: str = Form(""), username: str = Form(...), password: str = Form(...)):
     if not valid_login(username, password):
         raise HTTPException(401, "Invalid G2HA credentials")
-    # The current relay exposes one Home Assistant instance as "home".
-    # OAuth must bind Google Home to that same instance, otherwise SYNC
-    # authenticates successfully but returns an empty device list.
-    params = {"code": oauth.create_code("home", client_id, redirect_uri)}
+    instance_id = _active_instance_id()
+    if not instance_id:
+        raise HTTPException(503, "Home Assistant instance is not connected")
+    params = {"code": oauth.create_code(instance_id, client_id, redirect_uri)}
     if state:
         params["state"] = state
     return RedirectResponse(f"{redirect_uri}?{urlencode(params)}", status_code=303)
@@ -169,9 +194,10 @@ async def google_assistant(request: Request) -> dict[str, Any]:
     instance_id = oauth.validate_access(auth[7:]) if auth.lower().startswith("bearer ") else None
     if os.getenv("G2HA_ENV", "development") != "production":
         instance_id = instance_id or request.headers.get("x-g2ha-instance") or body.get("payload", {}).get("agentUserId")
+    instance_id = _resolve_instance_id(instance_id)
     if not instance_id:
         raise HTTPException(401, "Missing linked G2HA instance")
-    instance = relay_state.get(instance_id)
+    instance = relay_state.instances[instance_id]
 
     intents = body.get("inputs", [])
     intent = intents[0].get("intent") if intents else None
