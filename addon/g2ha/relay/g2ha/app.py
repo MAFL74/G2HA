@@ -29,13 +29,32 @@ oauth = OAuthStore(os.getenv("G2HA_OAUTH_DB", "/var/lib/g2ha/oauth.sqlite3"))
 
 @app.get("/", response_class=HTMLResponse)
 async def home() -> HTMLResponse:
-    """Show a small direct-service status page for the optional Web UI port."""
+    """Open the useful G2HA dashboard from the add-on sidebar/Web UI."""
     return HTMLResponse(
         "<!doctype html><html><head><meta charset='utf-8'><title>G2HA Relay</title>"
         "<style>body{font-family:system-ui,sans-serif;margin:3rem;background:#111;color:#eee}"
         "a{color:#4fc3f7}</style></head><body><h1>G2HA Relay</h1>"
-        "<p>Relay is running.</p><p>The Home Assistant dashboard is available from the "
-        "G2HA entry in the Home Assistant sidebar.</p></body></html>"
+        "<p>Opening the G2HA dashboard…</p>"
+        "<p><a id='dashboard' href='/g2ha-dashboard/g2ha'>Open G2HA dashboard</a></p>"
+        "<script>"
+        "const dashboard=location.port==='8000'"
+        "?location.protocol+'//'+location.hostname+':8123/g2ha-dashboard/g2ha'"
+        ":location.origin+'/g2ha-dashboard/g2ha';"
+        "document.getElementById('dashboard').href=dashboard;"
+        "location.replace(dashboard);"
+        "</script></body></html>"
+    )
+
+
+@app.get("/status", response_class=HTMLResponse)
+async def status_page() -> HTMLResponse:
+    """Provide the direct relay status page without redirecting to the dashboard."""
+    return HTMLResponse(
+        "<!doctype html><html><head><meta charset='utf-8'><title>G2HA Relay status</title>"
+        "<style>body{font-family:system-ui,sans-serif;margin:3rem;background:#111;color:#eee}"
+        "a{color:#4fc3f7}</style></head><body><h1>G2HA Relay</h1>"
+        "<p>Relay is running.</p><p>Health: <a href='/health'>/health</a></p>"
+        "<p><a href='/g2ha-dashboard/g2ha'>Open G2HA dashboard</a></p></body></html>"
     )
 
 
@@ -158,3 +177,4 @@ async def ha_ws(websocket: WebSocket, instance_id: str):
     except Exception:
         _LOGGER.exception("G2HA HA WebSocket failed for instance %s", instance_id)
         relay_state.disconnect(instance_id, websocket)
+
