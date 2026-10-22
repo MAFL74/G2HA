@@ -1,5 +1,5 @@
 name: G2HA Relay
-version: "0.3.8"
+version: "0.3.9"
 slug: g2ha_relay
 description: Local G2HA relay for Home Assistant and Google Home
 arch:
