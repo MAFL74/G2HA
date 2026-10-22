@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import os
 import uuid
 import logging
@@ -67,9 +68,48 @@ async def health() -> dict[str, str]:
 async def authorize(request: Request, response_type: str, client_id: str, redirect_uri: str, state: str = "", scope: str = "", login_hint: str = ""):
     if response_type != "code":
         raise HTTPException(400, "Only response_type=code is supported")
-    html = f'''<html><body><h2>G2HA account linking</h2><form method="post" action="/auth/authorize/submit">
-    <input type="hidden" name="client_id" value="{escape(client_id)}"><input type="hidden" name="redirect_uri" value="{escape(redirect_uri)}"><input type="hidden" name="state" value="{escape(state)}">
-    <label>Username <input name="username" autocomplete="username"></label><br><label>Password <input type="password" name="password" autocomplete="current-password"></label><br><button>Allow Google Home</button></form></body></html>'''
+    html = f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Connect Google Home to G2HA</title>
+  <style>
+    :root {{ color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px 16px; background: #101216; color: #f4f5f7; }}
+    main {{ width: min(100%, 520px); padding: clamp(24px, 6vw, 44px); border: 1px solid #30343d; border-radius: 24px; background: #1b1e24; box-shadow: 0 18px 60px #0006; }}
+    .brand {{ display: flex; align-items: center; gap: 12px; margin-bottom: 28px; color: #8ecbff; font-size: 1.05rem; font-weight: 700; letter-spacing: .02em; }}
+    .brand-mark {{ display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #087db4; color: white; font-size: 1.2rem; }}
+    h1 {{ margin: 0 0 10px; font-size: clamp(1.65rem, 5vw, 2.2rem); line-height: 1.15; }}
+    .intro {{ margin: 0 0 28px; color: #c4c9d2; font-size: 1rem; line-height: 1.5; }}
+    form {{ display: grid; gap: 18px; }}
+    label {{ display: grid; gap: 8px; color: #e5e8ee; font-size: 1rem; font-weight: 650; }}
+    input {{ width: 100%; min-height: 54px; padding: 13px 15px; border: 1px solid #5b6472; border-radius: 12px; background: #111318; color: #fff; font: inherit; font-size: 16px; }}
+    input:focus {{ outline: 3px solid #55b9f5; outline-offset: 2px; border-color: #9bdcff; }}
+    button {{ min-height: 56px; margin-top: 4px; border: 0; border-radius: 14px; background: #0aa4d8; color: #fff; font: inherit; font-size: 1.05rem; font-weight: 750; cursor: pointer; }}
+    button:active {{ transform: translateY(1px); }}
+    .privacy {{ margin: 24px 0 0; color: #aab1bc; font-size: .9rem; line-height: 1.45; }}
+    @media (max-width: 420px) {{ body {{ padding: 12px; }} main {{ border-radius: 18px; }} }}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">⌂</span><span>G2HA Relay</span></div>
+    <h1>Connect Google Home</h1>
+    <p class="intro">Sign in with your G2HA account to allow Google Home to access your selected devices.</p>
+    <form method="post" action="/auth/authorize/submit">
+      <input type="hidden" name="client_id" value="{escape(client_id)}">
+      <input type="hidden" name="redirect_uri" value="{escape(redirect_uri)}">
+      <input type="hidden" name="state" value="{escape(state)}">
+      <label for="username">Username<input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label for="password">Password<input id="password" name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Allow Google Home</button>
+    </form>
+    <p class="privacy">You can change which devices are exposed later in Home Assistant.</p>
+  </main>
+</body>
+</html>'''
     return HTMLResponse(html)
 
 @app.post("/auth/authorize/submit")
@@ -88,8 +128,24 @@ async def authorize_submit(client_id: str = Form(...), redirect_uri: str = Form(
 @app.post("/auth/token")
 async def token(request: Request):
     form = await request.form()
-    client_id = str(form.get("client_id", ""))
-    if os.getenv("G2HA_OAUTH_CLIENT_ID") and client_id != os.getenv("G2HA_OAUTH_CLIENT_ID"):
+    client_id = str(form.get("client_id", "") or request.query_params.get("client_id", ""))
+    if not client_id:
+        authorization = request.headers.get("authorization", "")
+        if authorization.lower().startswith("basic "):
+            try:
+                credentials = base64.b64decode(authorization[6:].strip()).decode("utf-8")
+                client_id = credentials.split(":", 1)[0]
+            except (ValueError, UnicodeDecodeError):
+                client_id = ""
+    configured_client_id = os.getenv("G2HA_OAUTH_CLIENT_ID", "")
+    if configured_client_id and not client_id:
+        _LOGGER.warning("OAuth token request did not include a client_id")
+        raise HTTPException(401, "Unknown OAuth client")
+    # Google Home's assigned OAuth client ID is separate from a Google Cloud
+    # OAuth credential ID. Keep accepting the latter for existing add-ons while
+    # binding every code/token exchange to the client ID in the authorization code.
+    if configured_client_id and client_id != configured_client_id and not configured_client_id.endswith(".apps.googleusercontent.com"):
+        _LOGGER.warning("OAuth token request used an unregistered client_id")
         raise HTTPException(401, "Unknown OAuth client")
     if form.get("grant_type") == "authorization_code":
         result = oauth.exchange_code(str(form.get("code", "")), client_id, str(form.get("redirect_uri", "")))
