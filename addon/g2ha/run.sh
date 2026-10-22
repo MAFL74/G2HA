@@ -13,13 +13,17 @@ class G2HAAccessFormatter(logging.Formatter):
 
     def format(self, record):
         timestamp = self.formatTime(record, "%Y-%m-%d %H:%M:%S%z")
-        client_addr = getattr(record, "client_addr", "-")
-        request_line = getattr(record, "request_line", "")
-        parts = request_line.split(" ", 2)
-        method = parts[0] if parts else "-"
-        target = parts[1] if len(parts) > 1 else "/"
+        args = getattr(record, "args", ())
+        if isinstance(args, tuple) and len(args) >= 5:
+            client_addr, method, target, _, status_code = args[:5]
+        else:
+            client_addr = getattr(record, "client_addr", "-")
+            request_line = getattr(record, "request_line", "")
+            parts = request_line.split(" ", 2)
+            method = parts[0] if parts else "-"
+            target = parts[1] if len(parts) > 1 else "/"
+            status_code = getattr(record, "status_code", "-")
         path = target.split("?", 1)[0]
-        status_code = getattr(record, "status_code", "-")
         return f"{timestamp} INFO {client_addr} {method} {path} {status_code}"
 
 try:
@@ -61,7 +65,9 @@ LOG_CONFIG = {
         "uvicorn": {"handlers": ["default"], "level": "INFO", "propagate": False},
         "uvicorn.error": {"level": "INFO"},
         "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+        "relay.g2ha": {"handlers": ["default"], "level": "INFO", "propagate": False},
     },
+    "root": {"handlers": ["default"], "level": "INFO"},
 }
 
 uvicorn.run('relay.g2ha.app:app', host='0.0.0.0', port=8000, log_config=LOG_CONFIG)
