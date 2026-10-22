@@ -48,6 +48,10 @@ _DOMAIN_TYPES = {
 }
 
 _GOOGLE = "action.devices."
+_GOOGLE_HVAC_MODE_MAP = {
+    "heat_cool": "heatcool",
+    "fan_only": "fan-only",
+}
 
 
 class G2HACoordinator:
@@ -265,7 +269,7 @@ class G2HACoordinator:
         if domain == "climate":
             modes = state.attributes.get("hvac_modes", [])
             attributes = {
-                "availableThermostatModes": [str(mode) for mode in modes],
+                "availableThermostatModes": [self._google_hvac_mode(mode) for mode in modes],
                 "thermostatTemperatureUnit": "C",
             }
         return {"id": state.entity_id, "type": f"{_GOOGLE}types.{device_type}", "name": state.name, "room_hint": room_hint, "home_name": self.home_name, "traits": traits, "attributes": attributes, "available": state.state not in ("unknown", "unavailable"), "state": self._state_payload(state)}
@@ -318,6 +322,12 @@ class G2HACoordinator:
             return None
         prefix = name.split(" - ", 1)[0].strip()
         return prefix or None
+
+    @staticmethod
+    def _google_hvac_mode(value: Any) -> str:
+        """Translate Home Assistant HVAC mode names to Google's vocabulary."""
+        mode = str(value).strip().lower()
+        return _GOOGLE_HVAC_MODE_MAP.get(mode, mode)
 
     @staticmethod
     def _parse_room_map(value: Any) -> dict[str, str]:
@@ -382,11 +392,27 @@ class G2HACoordinator:
         if state.domain == "lock":
             return {"isLocked": value == "locked"}
         if state.domain == "climate":
-            return {"thermostatMode": state.attributes.get("hvac_action", state.state), "thermostatTemperatureSetpoint": state.attributes.get("temperature")}
+            return {
+                "thermostatMode": self._google_hvac_mode(state.state),
+                "thermostatTemperatureSetpoint": state.attributes.get("temperature"),
+            }
         if state.domain == "water_heater":
-            return {"thermostatMode": state.attributes.get("operation_mode", state.state), "thermostatTemperatureSetpoint": state.attributes.get("temperature")}
+            return {
+                "thermostatMode": self._google_hvac_mode(state.attributes.get("operation_mode", state.state)),
+                "thermostatTemperatureSetpoint": state.attributes.get("temperature"),
+            }
         if state.domain == "media_player":
-            return {"mediaState": {"activityState": "ACTIVE" if state.state == "playing" else "INACTIVE"}, "currentVolume": state.attributes.get("volume_level", 0)}
+            playback_state = {
+                "playing": "PLAYING",
+                "paused": "PAUSED",
+                "buffering": "BUFFERING",
+                "off": "STOPPED",
+            }.get(state.state, "STOPPED")
+            return {
+                "on": state.state not in ("off", "idle", "standby"),
+                "activityState": "ACTIVE" if state.state in ("playing", "paused", "buffering") else "INACTIVE",
+                "playbackState": playback_state,
+            }
         if state.domain in ("sensor", "binary_sensor"):
             value = state.state
             try:
