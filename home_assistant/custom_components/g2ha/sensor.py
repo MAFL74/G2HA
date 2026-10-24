@@ -107,10 +107,15 @@ class G2HAStatusSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         if self._metric == "count":
+            synced_devices = self.coordinator.devices
             return {
                 "relay_url": self.coordinator.url,
                 "instance_id": self.coordinator.instance_id,
                 "device_types": self.coordinator.device_counts,
+                "synced_device_names": [
+                    item.get("name") or item.get("id")
+                    for item in synced_devices
+                ],
                 "synced_devices": [
                     {
                         "name": item.get("name"),
@@ -122,7 +127,7 @@ class G2HAStatusSensor(SensorEntity):
                         "available": item.get("available", True),
                         "state": item.get("state", {}),
                     }
-                    for item in self.coordinator.inventory
+                    for item in synced_devices
                 ],
             }
         return None
@@ -189,4 +194,5 @@ class G2HADeviceSensor(SensorEntity):
     async def async_will_remove_from_hass(self) -> None:
         if self._handle_update in self.coordinator.listeners:
             self.coordinator.listeners.remove(self._handle_update)
+
 
