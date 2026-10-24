@@ -19,6 +19,24 @@ _DEVICE_TYPE_METRICS = {
     "VACUUM", "LOCK", "TV", "CAMERA", "SENSOR",
 }
 
+_DEVICE_TYPE_ICONS = {
+    "LIGHT": "mdi:lightbulb",
+    "OUTLET": "mdi:power-socket",
+    "SWITCH": "mdi:toggle-switch",
+    "FAN": "mdi:fan",
+    "BLINDS": "mdi:blinds",
+    "THERMOSTAT": "mdi:thermostat",
+    "WATERHEATER": "mdi:water-boiler",
+    "HUMIDIFIER": "mdi:air-humidifier",
+    "DEHUMIDIFIER": "mdi:air-humidifier-off",
+    "AIRPURIFIER": "mdi:air-purifier",
+    "VACUUM": "mdi:robot-vacuum",
+    "LOCK": "mdi:lock",
+    "TV": "mdi:television",
+    "CAMERA": "mdi:cctv",
+    "SENSOR": "mdi:eye",
+}
+
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
@@ -40,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         "VACUUM": "Vacuums", "LOCK": "Locks", "TV": "Media players",
         "CAMERA": "Cameras", "SENSOR": "Sensors",
     }.items():
-        entities.append(G2HAStatusSensor(coordinator, entry, f"type_{key.lower()}", f"Synced {label}", "mdi:home-assistant", key))
+        entities.append(G2HAStatusSensor(coordinator, entry, f"type_{key.lower()}", f"Synced {label}", _DEVICE_TYPE_ICONS.get(key, "mdi:home-assistant"), key))
     async_add_entities(entities)
 
 
@@ -77,6 +95,8 @@ class G2HAStatusSensor(SensorEntity):
     def native_value(self):
         if self._metric == "count":
             return len(self.coordinator.devices)
+        if self._metric in _DEVICE_TYPE_METRICS:
+            return f"{len(self._synced_items_for_type())} synced"
         if self._metric == "sync_progress":
             return self.coordinator.sync_progress
         if self._metric == "sync_status":
@@ -108,7 +128,7 @@ class G2HAStatusSensor(SensorEntity):
     def native_unit_of_measurement(self):
         if self._metric == "sync_progress":
             return "%"
-        return "devices" if self._metric == "count" or self._metric in _DEVICE_TYPE_METRICS else None
+        return "devices" if self._metric == "count" else None
 
     def _synced_items_for_type(self):
         return [
