@@ -121,6 +121,7 @@ class G2haDeviceBrowser extends HTMLElement {
 
   _applySearch() {
     const query = this._query.toLowerCase().trim();
+    const devices = this._devices();
     this.shadowRoot.querySelectorAll("details[data-group]").forEach((group) => {
       let visible = 0;
       group.querySelectorAll(".device").forEach((device) => {
@@ -130,11 +131,14 @@ class G2haDeviceBrowser extends HTMLElement {
       });
       group.hidden = visible === 0;
       const count = group.querySelector(".group-count");
-      if (count) count.textContent = `${visible} devices`;
+      if (count) {
+        const groupDevices = devices.filter((device) => this._friendlyType(device.type) === group.dataset.group);
+        const selected = groupDevices.filter((device) => this._selected.has(device.entity_id)).length;
+        count.textContent = `${selected}/${groupDevices.length} devices`;
+      }
     });
     const visible = [...this.shadowRoot.querySelectorAll(".device")].filter((device) => !device.hidden).length;
     const summary = this.shadowRoot.querySelector(".summary");
-    const devices = this._devices();
     const exposed = devices.filter((device) => this._selected.has(device.entity_id)).length;
     if (summary) summary.textContent = `${visible} of ${devices.length} available entities · ${exposed} synchronized with Google Home`;
   }
