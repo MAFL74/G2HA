@@ -250,7 +250,11 @@ async def ha_ws(websocket: WebSocket, instance_id: str):
     try:
         while True:
             raw_message = await websocket.receive_json()
-            _LOGGER.info("G2HA HA message type=%s", raw_message.get("type"))
+            message_type = raw_message.get("type")
+            if message_type == "state":
+                _LOGGER.debug("G2HA HA message type=%s", message_type)
+            else:
+                _LOGGER.info("G2HA HA message type=%s", message_type)
             envelope = HAEnvelope.model_validate(raw_message)
             if envelope.type == "hello":
                 await websocket.send_json({"type": "hello_ack"})
@@ -267,4 +271,5 @@ async def ha_ws(websocket: WebSocket, instance_id: str):
     except Exception:
         _LOGGER.exception("G2HA HA WebSocket failed for instance %s", instance_id)
         relay_state.disconnect(instance_id, websocket)
+
 
