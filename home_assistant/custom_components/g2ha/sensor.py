@@ -77,10 +77,6 @@ class G2HAStatusSensor(SensorEntity):
     def native_value(self):
         if self._metric == "count":
             return len(self.coordinator.devices)
-        if self._metric in _DEVICE_TYPE_METRICS:
-            names = self._synced_names_for_type()
-            value = ", ".join(names) or "No synced devices"
-            return value[:252] + "..." if len(value) > 255 else value
         if self._metric == "sync_progress":
             return self.coordinator.sync_progress
         if self._metric == "sync_status":
@@ -112,7 +108,7 @@ class G2HAStatusSensor(SensorEntity):
     def native_unit_of_measurement(self):
         if self._metric == "sync_progress":
             return "%"
-        return "devices" if self._metric == "count" else None
+        return "devices" if self._metric == "count" or self._metric in _DEVICE_TYPE_METRICS else None
 
     def _synced_items_for_type(self):
         return [
