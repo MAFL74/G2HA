@@ -4,6 +4,7 @@ class G2haDeviceBrowser extends HTMLElement {
     super();
     this._rendered = false;
     this._inventorySignature = "";
+    this._knownEntityIds = new Set();
   }
 
   getCardSize() {
@@ -60,7 +61,12 @@ class G2haDeviceBrowser extends HTMLElement {
       .filter((device) => device && typeof device === "object")
       .map((device) => ({ ...device, entity_id: device.entity_id || device.id }))
       .filter((device) => device.entity_id);
-    devices.forEach((device) => { if (device.exposed && !this._selected.has(device.entity_id)) this._selected.add(device.entity_id); });
+    devices.forEach((device) => {
+      if (!this._knownEntityIds.has(device.entity_id)) {
+        if (device.exposed) this._selected.add(device.entity_id);
+        this._knownEntityIds.add(device.entity_id);
+      }
+    });
     return devices;
   }
 
@@ -194,7 +200,12 @@ class G2haDeviceBrowser extends HTMLElement {
     const save = async (sync) => { await this._hass.callService("g2ha", "set_exposure", { entity_ids: [...this._selected] }); if (sync) await this._hass.callService("button", "press", { entity_id: "button.g2ha_relay_force_sync_now" }); };
     this.shadowRoot.querySelector(".save")?.addEventListener("click", () => save(false));
     this.shadowRoot.querySelector(".save-sync")?.addEventListener("click", () => save(true));
-    this.shadowRoot.querySelectorAll("[data-select]").forEach((box) => box.addEventListener("click", (event) => { event.stopPropagation(); if (event.target.checked) this._selected.add(event.target.dataset.select); else this._selected.delete(event.target.dataset.select); }));
+    this.shadowRoot.querySelectorAll("[data-select]").forEach((box) => box.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (event.target.checked) this._selected.add(event.target.dataset.select);
+      else this._selected.delete(event.target.dataset.select);
+      this._render();
+    }));
     this.shadowRoot.querySelectorAll("[data-group-select]").forEach((box) => {
       box.indeterminate = box.dataset.indeterminate === "true";
       box.addEventListener("click", (event) => event.stopPropagation());
