@@ -150,6 +150,18 @@ class G2HAStatusSensor(SensorEntity):
                 "relay_url": self.coordinator.url,
                 "instance_id": self.coordinator.instance_id,
                 "device_types": self.coordinator.device_counts,
+                "inventory": [
+                    {
+                        "name": item.get("name"),
+                        "entity_id": item.get("id"),
+                        "type": item.get("type"),
+                        "room": item.get("room_hint"),
+                        "traits": item.get("traits", []),
+                        "exposed": item.get("exposed", False),
+                        "available": item.get("available", True),
+                    }
+                    for item in self.coordinator.inventory
+                ],
                 "synced_device_names": [
                     item.get("name") or item.get("id")
                     for item in synced_devices
