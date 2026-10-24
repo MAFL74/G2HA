@@ -1,5 +1,5 @@
 name: G2HA Relay
-version: "0.3.13"
+version: "0.3.14"
 slug: g2ha_relay
 description: Local G2HA relay for Home Assistant and Google Home
 arch:
@@ -29,4 +29,5 @@ schema:
   oauth_username: str
   oauth_password: password
   oauth_client_id: str
+
 
