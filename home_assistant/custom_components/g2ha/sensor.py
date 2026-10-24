@@ -13,6 +13,12 @@ from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN
 from .coordinator import G2HACoordinator
 
+_DEVICE_TYPE_METRICS = {
+    "LIGHT", "OUTLET", "SWITCH", "FAN", "BLINDS", "THERMOSTAT",
+    "WATERHEATER", "HUMIDIFIER", "DEHUMIDIFIER", "AIRPURIFIER",
+    "VACUUM", "LOCK", "TV", "CAMERA", "SENSOR",
+}
+
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
@@ -71,6 +77,10 @@ class G2HAStatusSensor(SensorEntity):
     def native_value(self):
         if self._metric == "count":
             return len(self.coordinator.devices)
+        if self._metric in _DEVICE_TYPE_METRICS:
+            names = self._synced_names_for_type()
+            value = ", ".join(names) or "No synced devices"
+            return value[:252] + "..." if len(value) > 255 else value
         if self._metric == "sync_progress":
             return self.coordinator.sync_progress
         if self._metric == "sync_status":
@@ -102,7 +112,19 @@ class G2HAStatusSensor(SensorEntity):
     def native_unit_of_measurement(self):
         if self._metric == "sync_progress":
             return "%"
-        return "devices" if self._metric == "count" or self._metric in ("LIGHT", "OUTLET", "SWITCH", "FAN", "BLINDS", "THERMOSTAT", "WATERHEATER", "HUMIDIFIER", "DEHUMIDIFIER", "AIRPURIFIER", "VACUUM", "LOCK", "TV", "CAMERA", "SENSOR") else None
+        return "devices" if self._metric == "count" else None
+
+    def _synced_items_for_type(self):
+        return [
+            item for item in self.coordinator.devices
+            if item.get("type", "").rsplit(".", 1)[-1] == self._metric
+        ]
+
+    def _synced_names_for_type(self):
+        return [
+            item.get("name") or item.get("id")
+            for item in self._synced_items_for_type()
+        ]
 
     @property
     def extra_state_attributes(self):
@@ -128,6 +150,19 @@ class G2HAStatusSensor(SensorEntity):
                         "state": item.get("state", {}),
                     }
                     for item in synced_devices
+                ],
+            }
+        if self._metric in _DEVICE_TYPE_METRICS:
+            items = self._synced_items_for_type()
+            return {
+                "device_count": len(items),
+                "synced_device_names": self._synced_names_for_type(),
+                "synced_devices": [
+                    {
+                        "name": item.get("name"),
+                        "entity_id": item.get("id"),
+                    }
+                    for item in items
                 ],
             }
         return None
