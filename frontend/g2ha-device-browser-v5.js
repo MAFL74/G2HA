@@ -139,10 +139,10 @@ class G2haDeviceBrowser extends HTMLElement {
     if (summary) summary.textContent = `${visible} of ${devices.length} available entities · ${exposed} synchronized with Google Home`;
   }
 
-  _render() {
+  _render(force = false) {
     if (!this.shadowRoot || !this._hass) return;
     const active = this.shadowRoot.activeElement;
-    if (active && (active.matches?.("input, select") || active.closest?.("input, select"))) return;
+    if (!force && active && (active.matches?.("input, select") || active.closest?.("input, select"))) return;
     const keepSearchFocus = active?.classList?.contains("search");
     const selectionStart = keepSearchFocus ? active.selectionStart : null;
     const selectionEnd = keepSearchFocus ? active.selectionEnd : null;
@@ -204,7 +204,7 @@ class G2haDeviceBrowser extends HTMLElement {
       event.stopPropagation();
       if (event.target.checked) this._selected.add(event.target.dataset.select);
       else this._selected.delete(event.target.dataset.select);
-      this._render();
+      this._render(true);
     }));
     this.shadowRoot.querySelectorAll("[data-group-select]").forEach((box) => {
       box.indeterminate = box.dataset.indeterminate === "true";
@@ -216,7 +216,7 @@ class G2haDeviceBrowser extends HTMLElement {
           if (event.target.checked) this._selected.add(d.entity_id);
           else this._selected.delete(d.entity_id);
         });
-        this._render();
+        this._render(true);
       });
     });
     this.shadowRoot.querySelectorAll("input, select").forEach((control) => {
