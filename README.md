@@ -1,6 +1,6 @@
 # G2HA
 
-G2HA is an independent, self-hosted bridge between Google Home and Home Assistant. It consists of a Home Assistant custom integration and a relay service that handles Google Home's cloud-to-cloud requests.
+G2HA is an independent, self-hosted Google Home bridge that includes both a Home Assistant custom integration and the G2HA proxy/relay server. The integration runs in Home Assistant; the proxy/relay handles Google Home cloud-to-cloud requests and forwards them to the connected Home Assistant instance.
 
 G2HA is a community project. It is not affiliated with, endorsed by, or supported by Nabu Casa or the Open Home Foundation. Home Assistant is a trademark of the Open Home Foundation.
 
