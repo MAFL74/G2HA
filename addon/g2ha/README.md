@@ -1,38 +1,23 @@
-# G2HA
+# G2HA Relay Home Assistant add-on
 
-G2HA is a minimal, self-hosted relay between Google Home Cloud-to-cloud and Home Assistant.
+The G2HA Relay add-on runs the relay service on Home Assistant OS. It is one hosting option for the relay; the G2HA custom integration still needs to be installed and configured in Home Assistant.
 
-## Project structure
+## What the add-on does
 
-- `home_assistant/custom_components/g2ha/` — Home Assistant-integrasjonen
-- `relay/g2ha/` — selvhostet HTTPS/OAuth/Google-relay
-- `docs/` — arkitektur, installasjon, OAuth og feilsøking
-- `deploy/` — systemd- og IIS-oppsett
+The relay accepts Google Home cloud-to-cloud HTTPS requests and maintains the connection to the Home Assistant integration. Home Assistant initiates an outbound WebSocket connection to the relay. The add-on exposes the relay's configured HTTP port and provides an ingress web interface.
 
-## Current draft
+## Configuration
 
-- FastAPI HTTP service
-- Google Smart Home `SYNC`, `QUERY`, `EXECUTE`, and `DISCONNECT` handlers
-- WebSocket endpoint for Home Assistant clients
-- In-memory device registry and connection manager
-- OAuth endpoint placeholders with explicit setup errors
-- No credentials or secrets in the repository
+Configure the add-on options in Home Assistant before starting it:
 
-This is a protocol skeleton, not production-ready hosting. It is intended to validate the relay contract locally before adding persistent storage, real OAuth, TLS, and deployment.
+- `environment`: runtime environment name.
+- `oauth_username`: OAuth account-linking username expected by this relay configuration.
+- `oauth_password`: OAuth account-linking password. Use a strong, unique value.
+- `oauth_client_id`: OAuth client identifier used by the relay's token exchange configuration.
 
-## Run
+Keep credentials private. Do not paste the add-on options, secrets, or tokens into public issues or repository files.
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python -m pip install -e .
-Copy-Item .env.example .env
-\.venv\Scripts\python -m uvicorn g2ha.app:app --reload
-```
+After starting the add-on, configure the G2HA Home Assistant integration with the relay's WebSocket URL and a stable instance ID. For Google Home, the relay must also be reachable at a public HTTPS URL with valid TLS; a local add-on port alone is not sufficient for Google's cloud service.
 
-Health check: `http://127.0.0.1:8000/health`
+See the repository's [Google Home setup guide](../../docs/google-setup.md) and [architecture overview](../../docs/architecture.md).
 
-## Protocol draft
-
-The Home Assistant side connects to `/api/v1/ha/ws?instance_id=...` and sends a `hello` message followed by device snapshots. Google requests are routed to the matching instance and returned as `query_result` or `execute_result` messages. The WebSocket adapter is intentionally small so it can later be implemented as a Home Assistant custom integration.
-
-See `docs/protocol.md` for the message contract and `docs/google-setup.md` for the remaining Google Cloud configuration.
