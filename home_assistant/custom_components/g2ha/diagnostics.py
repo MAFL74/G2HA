@@ -27,6 +27,8 @@ async def async_get_config_entry_diagnostics(
         },
         "summary": {
             "device_count": len(coordinator.devices),
+            "found_count": coordinator.found_count,
+            "filtered_count": coordinator.filtered_count,
             "device_types": coordinator.device_counts,
         },
         "devices": [
