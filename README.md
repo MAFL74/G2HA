@@ -64,5 +64,5 @@ G2HA is independently maintained. Google Home, Home Assistant, and hosting envir
 
 ## License
 
-This repository does not currently include a license file. Unless and until one is added, do not assume that the source is available for reuse, modification, or redistribution.
+G2HA is released under the [MIT License](LICENSE). You are free to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software, subject to preserving the copyright and license notice. The software is provided without warranty. This license does not grant permission to use third-party trademarks, including the Home Assistant name or logo.
 
