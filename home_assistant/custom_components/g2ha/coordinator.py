@@ -194,6 +194,16 @@ class G2HACoordinator:
     def device_counts(self) -> dict[str, int]:
         return dict(Counter(item["type"].rsplit(".", 1)[-1] for item in self.devices))
 
+    @property
+    def found_count(self) -> int:
+        """Number of entities that are supported by G2HA before exposure filtering."""
+        return len(self.inventory)
+
+    @property
+    def filtered_count(self) -> int:
+        """Number of supported entities excluded from the synchronized device list."""
+        return max(0, self.found_count - len(self.devices))
+
     def _notify_listeners(self) -> None:
         for listener in tuple(self.listeners):
             listener()
