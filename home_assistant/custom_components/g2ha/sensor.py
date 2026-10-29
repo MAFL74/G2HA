@@ -45,6 +45,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         G2HAStatusSensor(coordinator, entry, "connection", "Connection", "mdi:lan-connect"),
         G2HAStatusSensor(coordinator, entry, "relay_address", "Relay address", "mdi:ip-network", "relay_address"),
         G2HAStatusSensor(coordinator, entry, "devices", "Synced devices", "mdi:devices", "count"),
+        G2HAStatusSensor(coordinator, entry, "found", "Found supported entities", "mdi:magnify", "found"),
+        G2HAStatusSensor(coordinator, entry, "filtered", "Filtered entities", "mdi:filter-off", "filtered"),
         G2HAStatusSensor(coordinator, entry, "last_sync", "Last sync", "mdi:sync"),
         G2HAStatusSensor(coordinator, entry, "sync_progress", "Sync progress", "mdi:progress-clock", "sync_progress"),
         G2HAStatusSensor(coordinator, entry, "sync_status", "Sync status", "mdi:sync-circle", "sync_status"),
@@ -95,6 +97,10 @@ class G2HAStatusSensor(SensorEntity):
     def native_value(self):
         if self._metric == "count":
             return len(self.coordinator.devices)
+        if self._metric == "found":
+            return self.coordinator.found_count
+        if self._metric == "filtered":
+            return self.coordinator.filtered_count
         if self._metric in _DEVICE_TYPE_METRICS:
             return f"{len(self._synced_items_for_type())} synced"
         if self._metric == "sync_progress":
@@ -179,6 +185,12 @@ class G2HAStatusSensor(SensorEntity):
                     }
                     for item in synced_devices
                 ],
+            }
+        if self._metric in ("found", "filtered"):
+            return {
+                "found": self.coordinator.found_count,
+                "synced": len(self.coordinator.devices),
+                "filtered": self.coordinator.filtered_count,
             }
         if self._metric in _DEVICE_TYPE_METRICS:
             items = self._synced_items_for_type()
